@@ -1,0 +1,14 @@
+# sbt
+project/project
+project/target
+target
+
+# ide, intellij
+.idea
+*.iml
+*.ipr
+*.iws
+
+# scala
+*.class
+*.log
