@@ -43,3 +43,9 @@ object RegexParser extends RegexParsers {
     }
 }
 
+abstract class State
+
+class      Consume(val c: Char, val out: State)      extends State // reference equality
+class      Split(val out_l: State, val out_r: State) extends State // reference equality
+class      Placeholder(var pointTo: State)           extends State // 
+case class Match()                                   extends State // value-based equality
