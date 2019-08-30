@@ -47,5 +47,34 @@ abstract class State
 
 class      Consume(val c: Char, val out: State)      extends State // reference equality
 class      Split(val out_l: State, val out_r: State) extends State // reference equality
-class      Placeholder(var pointTo: State)           extends State // 
-case class Match()                                   extends State // value-based equality
+class      Placeholder(var pointTo: State)           extends State // binding to pass context through a Repeat; allows cyclicality
+case class Match()                                   extends State // case class for value-based equality
+
+object NFA {
+    // non-deterministic finite automata state machine; real fun to say, too
+
+    def regexToNFA(re: RegexExpr): State = regexToNFA(re, Match())
+
+    private def regexToNFA(re: RegexExpr, andThen: State): State = {
+
+        re match {
+
+            case Literal(c)   => new Consume(c, andThen)
+
+            case Or(l, r)     => new Split(regexToNFA(l, andThen), regexToNFA(r, andThen))
+
+            case Concat(a, b) => {regexToNFA(a, regexToNFA(b, andThen))} // convert first item to NFA, output result of converting second to NFA
+
+            case Repeat(r)    =>
+                val placeholder = new Placeholder(pointTo=null)
+                val split       = new Split(regexToNFA(r, placeholder), andThen)
+                // one path to placeholder, the other back back to r
+                placeholder.pointTo = split
+
+                placeholder
+
+            case Plus(r)      => regexToNFA(Concat(r, Repeat(r)), andThen)
+
+        }
+    }
+}
