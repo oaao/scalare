@@ -1,5 +1,5 @@
-import scala.annotation.tailrec
 import scala.util.parsing.combinator._
+
 
 abstract class RegexExpr
 
@@ -8,6 +8,7 @@ case class Or(exprA: RegexExpr, exprB: RegexExpr) extends RegexExpr // a | b
 case class Concat(a: RegexExpr, b: RegexExpr)     extends RegexExpr // abc -> Concat(a, Concat(b, c))
 case class Repeat(expr: RegexExpr)                extends RegexExpr // a*
 case class Plus(expr: RegexExpr)                  extends RegexExpr // a+
+
 
 /* operator binding order (strongest -> weakest):
  (1. char literals, parentheses)
@@ -41,7 +42,9 @@ object RegexParser extends RegexParsers {
             case failure: NoSuccess => None
         }
     }
+
 }
+
 
 abstract class State
 
@@ -49,6 +52,7 @@ class      Consume(val c: Char, val out: State)      extends State // reference 
 class      Split(val out_l: State, val out_r: State) extends State // reference equality
 class      Placeholder(var pointTo: State)           extends State // binding to pass context through a Repeat; allows cyclicality
 case class Match()                                   extends State // case class for value-based equality
+
 
 object NFA {
     // non-deterministic finite automata state machine; real fun to say, too
@@ -58,23 +62,19 @@ object NFA {
     private def regexToNFA(re: RegexExpr, andThen: State): State = {
 
         re match {
-
             case Literal(c)   => new Consume(c, andThen)
-
             case Or(l, r)     => new Split(regexToNFA(l, andThen), regexToNFA(r, andThen))
-
             case Concat(a, b) => {regexToNFA(a, regexToNFA(b, andThen))} // convert first item to NFA, output result of converting second to NFA
-
             case Repeat(r)    =>
                 val placeholder = new Placeholder(pointTo=null)
                 val split       = new Split(regexToNFA(r, placeholder), andThen)
                 // one path to placeholder, the other back back to r
                 placeholder.pointTo = split
-
                 placeholder
-
             case Plus(r)      => regexToNFA(Concat(r, Repeat(r)), andThen)
-
         }
+
     }
 }
+
+
