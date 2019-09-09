@@ -80,26 +80,26 @@ object NFA {
 
 object NFAEvaluator {
 
-    def evaluate(NFA: State, input: String): Boolean =
-        evaluate(Set(NFA), input)
+    def evaluate(nfa: State, input: String): Boolean =
+        evaluate(Set(nfa), input)
 
-    def evaluate(multipleNFA: Set[State], input:String): Boolean = {
+    def evaluate(multipleNfas: Set[State], input:String): Boolean = {
         input match {
             case "" =>
-                evaluateStates(multipleNFA, None).exists(_ == Match())
+                evaluateStates(multipleNfas, None).exists(_ == Match())
             case string =>
                 evaluate(
-                    evaluateStates(multipleNFA, input.headOption),
+                    evaluateStates(multipleNfas, input.headOption),
                     string.tail
                 )
         }
     }
 
-    def evaluateStates(multipleNFA: Set[State], input: Option[Char]): Set[State] = {
+    def evaluateStates(multipleNfas: Set[State], input: Option[Char]): Set[State] = {
 
         val visitedStates = mutable.Set[State]()
 
-        multipleNFA.flatMap { state =>
+        multipleNfas.flatMap { state =>
             evaluateState(state, input, visitedStates)
         }
     }
@@ -131,4 +131,17 @@ object NFAEvaluator {
 
     }
 
+}
+
+object Regex {
+    def fullMatch(input: String, pattern: String): Boolean = {
+        val parsed = RegexParser(pattern).getOrElse(
+            throw new RuntimeException("Failed to parse regular expression")
+        )
+        val nfa = NFA.regexToNFA(parsed)
+        NFAEvaluator.evaluate(nfa, input)
+    }
+
+    def matchAnywhere(input: string, pattern: String): Boolean =
+        fullMatch(input, ".*" + pattern + ".*")
 }
