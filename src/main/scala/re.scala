@@ -1,3 +1,4 @@
+import scala.collection.mutable
 import scala.util.parsing.combinator._
 
 
@@ -49,7 +50,7 @@ object RegexParser extends RegexParsers {
 abstract class State
 
 class      Consume(val c: Char, val out: State)      extends State // reference equality
-class      Split(val out_l: State, val out_r: State) extends State // reference equality
+class      Split(val outL: State, val outR: State)   extends State // reference equality
 class      Placeholder(var pointTo: State)           extends State // binding to pass context through a Repeat; allows cyclicality
 case class Match()                                   extends State // case class for value-based equality
 
@@ -77,4 +78,57 @@ object NFA {
     }
 }
 
+object NFAEvaluator {
 
+    def evaluate(NFA: State, input: String): Boolean =
+        evaluate(Set(NFA), input)
+
+    def evaluate(multipleNFA: Set[State], input:String): Boolean = {
+        input match {
+            case "" =>
+                evaluateStates(multipleNFA, None).exists(_ == Match())
+            case string =>
+                evaluate(
+                    evaluateStates(multipleNFA, input.headOption),
+                    string.tail
+                )
+        }
+    }
+
+    def evaluateStates(multipleNFA: Set[State], input: Option[Char]): Set[State] = {
+
+        val visitedStates = mutable.Set[State]()
+
+        multipleNFA.flatMap { state =>
+            evaluateState(state, input, visitedStates)
+        }
+    }
+
+    def evaluateState(currentState: State, input: Option[Char],
+                      visitedStates: mutable.Set[State]): Set[State] = {
+
+        if (visitedStates contains currentState) {
+            Set()
+        } else {
+            visitedStates.add(currentState)
+
+            currentState match {
+                case placeholder: Placeholder =>
+                    evaluateState(placeholder.pointTo, input, visitedStates)
+                case consume: Consume =>
+                    if (Some(consume.c) == input || consume.c == '.') {
+                        Set(consume.out)
+                    } else {
+                        Set()
+                    }
+                case s: Split =>
+                    evaluateState(s.outL, input, visitedStates) ++
+                    evaluateState(s.outR, input, visitedStates)
+                case m: Match =>
+                    if (input.isDefined) Set() else Set(Match())
+            }
+        }
+
+    }
+
+}
